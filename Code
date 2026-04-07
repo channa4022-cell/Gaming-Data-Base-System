@@ -1,0 +1,327 @@
+create database gamingdb;
+use gamingdb;
+
+create table Accoun_t( AcctName varchar (50) primary key,
+					  Pass_word varchar(100) not null,
+                      lastSignedon datetime,
+                      sbscrbrName varchar(50),
+                      sbscrbrAddress varchar(100),
+                      sbscrbrEmail varchar(50),
+                      sbscrbrPhone varchar(15),
+                      AcctCreatedOn date);
+select * from Accoun_t;
+
+use gamingdb;
+
+create table Region ( RegionName varchar(50) primary key,
+					 climate varchar(50),
+                     precipitation varchar(50),
+                     foliage varchar(50));
+                     
+use gamingdb;
+
+create table Item ( ItemName varchar(50) primary key,
+					ItemType varchar(50),
+                    ItemDamage int);
+                    
+use gamingdb;
+
+create table Creep ( CreepName varchar(50) primary key,
+					HitPoints int,
+                    Mana int,
+                    Attack int);
+                    
+use gamingdb;
+
+create table Characte_r ( CharName varchar(50) primary key,
+						  Leve_l int,
+                          ExpPoints int,
+                          Typ_e varchar(50),
+                          MaxHitPoints int,
+                          MaxMana int,
+                          CurrHitPoints int,
+                          CurrMana int,
+                          CreatedOn date,
+                          LastPlayed datetime,
+                          AcctName varchar(50),
+                          RegionName varchar(50),
+                          Foreign key (AcctName) references Accoun_t(AcctName),
+						  Foreign key (RegionName) references Region(RegionName));
+select * from characte_r;
+use gamingdb;
+
+create table ItemInstantiation(I_IDNum int primary key,
+							   Modifier varchar(50),
+                               WhenCreated datetime,
+                               ItemName varchar(50),
+                               foreign key (ItemName) references Item(ItemName));
+select * from ItemInstantiation;
+
+use gamingdb;
+
+create table CreepInstantiation ( C_IDNum int primary key,
+								  CreepName varchar(50),
+                                  RegionName varchar(50),
+                                  foreign key (CreepName) references Creep(CreepName),
+                                  foreign key (RegionName) references Region(RegionName));
+select * from CreepInstantiation;
+
+# Relationships
+#1. Account-Character (Has)
+use gamingdb;
+create table Acc_Char ( AcctName varchar(50),
+						Lastplayed datetime,
+                        CreatedOn date,
+                        CharName varchar(50),
+                        primary key (AcctName,Lastplayed,CreatedOn,CharName),
+                        foreign key (AcctName) references Accoun_t (AcctName),
+                        foreign key (CharName) references Characte_r(CharName));
+select * from Acc_Char;
+#2. Character-Creep(RANINTO)
+use gamingdb;
+create table RanInto( CharName varchar(50),
+					  CreepName varchar(50),
+                      primary key(CharName,CreepName),
+                      foreign key (CharName) references Characte_r(CharName),
+                      foreign key (CreepName) references Creep(CreepName));
+select * from RanInto;       
+
+#3. Character-ItemInstantiation(Carrying)
+use gamingdb;    
+create table Char_Item( CharName varchar(50),
+						I_IDNum int,
+                        primary key(CharName,I_IDNum),
+                        foreign key (CharName) references Characte_r(CharName),
+                        foreign key (I_IDNum) references ItemInstantiation (I_IDNum));
+select * from Char_Item;
+
+#4. Region-Character(Contains)
+use gamingdb;
+create table Reg_Char(RegionName varchar(50),
+					  CharName varchar(50),
+                      primary key (RegionName,CharName),
+                      foreign key (RegionName) references Region (RegionName),
+                      foreign key (CharName) references Characte_r(CharName));
+select * from Reg_Char;
+
+#5. Item-ItemInstantiation (IsType)
+use gamingdb;
+create table Istype(I_IDNum int,
+					WhenCreated datetime,
+                    ItemName varchar(50),
+                    primary key(I_IDNum,WhenCreated,ItemName),
+                    foreign key(I_IDNum) references ItemInstantiation (I_IDNum),
+                    foreign key (ItemName) references Item (ItemName));
+select * from Istype;       
+
+#6. Creep-CreepInstantiation (Istype)
+use gamingdb;   
+create table CreepIns( CreepName varchar(50),
+					   C_IDNum int,
+                       primary key (CreepName,C_IDNum),
+                       foreign key(CreepName) references Creep(CreepName),
+                       foreign key(C_IDNum) references CreepInstantiation (C_IDNum));
+select * from CreepIns;  
+
+#7. Region-CreepInstantiation (Contains)
+use gamingdb;
+create table Contain_s(RegionName varchar(50),
+					   C_IDNum int,
+                       primary key (RegionName,C_IDNum),
+                       foreign key (RegionName) references Region (RegionName),
+                       foreign key (C_IDNum) references CreepInstantiation (C_IDNum));
+select * from Contain_s;	
+
+#8. ItemInstantiation-CreepInstantiation(Carrying)
+use gamingdb;	
+create table Carrying( C_IDNum int,
+					   I_IDNum int,
+                       primary key (C_IDNum,I_IDNum),
+                       foreign key (C_IDNum) references CreepInstantiation (C_IDNum),
+                       foreign key (I_IDNum) references ItemInstantiation (I_IDNum));
+select * from Carrying;    
+
+# STORED PROCEDURES
+ 
+ call Add_Account;
+ call Add_Region;
+call Add_Item;
+call Add_Item_Instance;
+call RanInto;
+
+# TRIGGERS
+# 1.Before Insert
+delimiter //
+create trigger C_har
+before insert 
+on Characte_r
+for each row
+ set new.CurrHitPoints = new.MaxHitPoints;
+ 
+ 
+ 
+delimiter //
+create trigger before_ItemIns
+before insert
+on ItemInstantiation
+for each row
+set new.WhenCreated = now();
+
+
+
+
+#2. After Insert
+create table Account_details(AcctName varchar (50) primary key,
+							Pass_word varchar(100) not null,
+							lastSignedon datetime,
+							sbscrbrName varchar(50),
+							sbscrbrAddress varchar(100),
+							sbscrbrEmail varchar(50),
+							sbscrbrPhone varchar(15),
+							AcctCreatedOn date,
+                            EntryTime time);
+delimiter //
+create trigger Acc_Details
+after insert
+on Accoun_t
+for each row
+insert into Account_details values (new.AcctName,new.Pass_word,new.lastSignedon,new.sbscrbrName,new.sbscrbrAddress,new.sbscrbrEmail,new.sbscrbrPhone,new.AcctCreatedOn,curtime());
+
+
+
+#3. Before Update
+
+delimiter //
+create trigger Char_before_update
+before update
+on Characte_r
+for each row
+begin
+	if new.CurrHitPoints < 0 then
+		set new.CurrHitPoints = 0;
+    end if;
+end;
+
+
+
+
+delimiter //
+create trigger before_update_char
+before update
+on Characte_r
+for each row
+begin
+	if new.CurrMana > new.MaxMana then
+		set new.CurrMana = new.MaxMana;
+	end if;
+end;
+
+
+
+
+#4. After Update
+create table Acc_after_update(AcctName varchar (50) primary key,
+							  Pass_word varchar(100) not null,
+							  lastSignedon datetime,
+							  sbscrbrName varchar(50),
+							  sbscrbrAddress varchar(100),
+							  sbscrbrEmail varchar(50),
+							  sbscrbrPhone varchar(15),
+							  AcctCreatedOn date,
+                              acc_description varchar(100));
+
+delimiter //
+create trigger after_update_Acc
+after update
+on Accoun_t
+for each row
+insert into Acc_after_update values( 1,concat("updated row at",now()));
+
+
+
+
+#5. Before Delete
+create table region_backup(RegionName varchar(50) primary key,
+						   climate varchar(50),
+                           precipitation varchar(50),
+                           foliage varchar(50));
+
+delimiter //
+create trigger region_bef_del
+before delete
+on Region
+for each row
+begin 
+	insert into region_backup values(old.RegionName,old.climate,old.precipitation,old.foliage,curtime());
+end;
+
+
+
+create table Acc_backup(AcctName varchar(50) primary key,
+						Pass_word varchar(100) not null,
+						lastSignedon datetime,
+                        sbscrbrName varchar(50),
+                        AcctCreatedOn date);
+
+delimiter //
+create trigger Acc_bef_del
+before delete
+on Accoun_t
+for each row
+begin
+	insert into Acc_backup values(old.AcctName,old.Pass_word,old.lastSignedon,old.sbscrbrName,old.AcctCreatedOn,now());
+end;
+
+
+
+
+#6. After delete
+ 
+create table account_backup(AcctName varchar(50) primary key,
+							Pass_word varchar(100) not null,
+							lastSignedon datetime,
+							sbscrbrName varchar(50),
+							AcctCreatedOn date,
+                            account_backup_details varchar(50));
+
+delimiter //
+create trigger acc_aft_del
+after delete
+on Accoun_t
+for each row
+begin 
+	insert into account_backup values (old.AcctName,old.Pass_word,old.lastSignedon,old.sbscrbrName,old.AcctCreatedOn,now());
+end;
+
+
+
+create table Itemins_details(I_IDNum int primary key,
+							 Modifier varchar(50),
+							 WhenCreated datetime,
+							 ItemName varchar(50),
+                             Itemins_backup_details varchar(100));
+							
+delimiter //
+create trigger Item_aft_del
+after delete
+on ItemInstantiation
+for each row
+begin
+	insert into Itemins_details values(old.I_IDNum,old.Modifier,old.WhenCreated,old.ItemName,now());
+end;
+
+
+
+create table Creepins_details(C_IDNum int primary key,
+					  CreepName varchar(50),
+					  RegionName varchar(50),
+                      Creep_backup_details varchar(100));
+                      
+delimiter //
+create trigger Creep_aft_del
+after delete
+on CreepInstantiation
+for each row
+begin
+	insert into Creepins_details values(old.C_IDNum,old.CreepName,old.RegionName,now());
+end;
